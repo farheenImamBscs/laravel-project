@@ -2,7 +2,7 @@
 @section('title', 'Login')
 @section('content')
     <div class="d-flex justify-content-center mt-5">
-        <form action="" method="post" style="width: 500px">
+        <form action="{{route('loginPost')}}" method="post" style="width: 500px">
             @csrf
             <div class="mb-3">
                 <label class="form-label">Email address</label>
