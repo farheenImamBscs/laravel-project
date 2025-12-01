@@ -8,7 +8,7 @@
 </head>
 <body>
 
-@include('include.header')
+@include('include.admin_header')
 @yield('content')
 
 {{-- Flash Message Section --}}
