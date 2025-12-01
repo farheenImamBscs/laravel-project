@@ -3,6 +3,7 @@
 @section('content')
     <div class="d-flex justify-content-center mt-5">
         <form action="{{route('registrationPost')}}" method="post" style="width: 500px">
+            @csrf
             <div class="mb-3">
                 <label class="form-label">Full name</label>
                 <input type="text" class="form-control" name="name">
