@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Laravel\Socialite\Facades\Socialite;
-
+use Illuminate\Support\Str;
 class AuthManager extends Controller
 {
 //    through sociallite wee are using the googledrive > redirect to the google screen
