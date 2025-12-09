@@ -1,71 +1,126 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Foundation\Support\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use MongoDB\Driver\Session;
-
+use Illuminate\Support\Facades\Session;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Str;
 class AuthManager extends Controller
 {
-    function register()
-    {
-        return view('registration');
-    }
+//    through sociallite wee are using the googledrive > redirect to the google screen
+
     function login()
     {
         return view('login');
     }
-    function test()
+
+    function register()
     {
-        return view('info');
+        return view('registration');
     }
 
-    // built in class hn 'request'
-    function registrationPost(Request $request){
-
-        $request->validate([
-            // 'name' in the html form is here the key
-            'name'=>'required',
-            // users is the name of the table, we also leave the users
-            'email'=>'required|email|unique:users', // means the format should be the email and it should be unique
-            'password'=>'required|min:8', // means mimimum 8 characters must be there in the password
-        ]);
-        // Brings all the data that is submitted in the form
-      $data=$request->all();
-      // array in which name, email, password is stored
-      $data['password']=$request->password;
-      $data['email']=$request->email;
-      $data['name']=$request->name;
-
-      $user = User::create($data);
-
-      if(!$user){
-          // redirects on the specified path
-          return redirect(route('registration'))->with('error', 'Registration Failed');
-
-      }
-        return redirect(route('login'))->with('success', 'Registration Successful');
+    function adminView()
+    {
+        return view('Admin.admin_home');
     }
-    function loginPost(Request $request){
+
+    function registrationPost(Request $request)
+    {
         $request->validate([
-            'email'=>'required|email',
-            'password'=>'required|min:8'
+            'name' => 'required',
+            'email' => 'required|email|unique:users',
+            'password' => 'required',
         ]);
+
+        $data['name'] = $request->name;
+        $data['email'] = $request->email;
+        $data['password'] = $request->password;
+
+        $user = User::create($data);
+        if (!$user) {
+            return redirect(route('registration'))->with("error", "Registration failed");
+        }
+        return redirect(route('login'))->with("success", "Registration successfull");
+    }
+
+    function loginPost(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+            'g-captcha-response' => 'captcha',
+        ]);
+
         $credentials = $request->only('email', 'password');
-        // matching the password and email with the database
+         // This is the credentials for the user
+        $adminCredentials = [
+            'email' => 'farheen@gmail.com',
+            'password' => 'abc.123',
+        ];
+
+        if ($request->email === $adminCredentials['email'] & $request->password === $adminCredentials['password']){
+        Auth::loginUsingId(2);
+        return redirect()->route('admin.home');
+    }
+
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
             return redirect()->route('welcome');
         }
-        return redirect(route('login'))->with('error', 'Login Failed');
+        return redirect(route('login'))->with("error", "Login failed");
     }
-    function logout(){
+
+    function logout()
+    {
+        Session::flush();
         Auth::logout();
-        Session::flush(); // remove the session cookiest
-        return redirect(route('login'))->with('success', 'Logout Successful');
+        return redirect(route('login'))->with("success", "Logged out successfully");
     }
+    // 1) Redirect user to Google
+    public function googleRedirect()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    // 2) Handle callback from Google
+    public function googleCallback()
+    {
+        try {
+//            the input details from the login with google with be stored in this
+            $googleUser = Socialite::driver('google')->user();
+
+            // Find existing user OR create new one. This 'email' is of our database
+            $user = User::where('email', $googleUser->getEmail())->first();
+
+            if (! $user) {
+                $user = User::create([
+//                    The below are the names of the column
+                    'name'              => $googleUser->getName(),
+                    'email'             => $googleUser->getEmail(),
+                    'password'          => bcrypt(Str::random(16)), // random password of the length
+                    'email_verified_at' => now(), // optional, this brings the current timestamp
+                    // 'role'           => 'user', // if you have roles
+                ]);
+            }
+
+            // Log the user in
+            Auth::login($user);
+
+            // Redirect based on role if you want
+            // if ($user->role === 'admin') {
+            //     return redirect()->route('admin.dashboard');
+            // }
+
+            return redirect()->route('dashboard'); // or home page
+
+        } catch (\Exception $e) { // we have used try catch that handles the login with google
+            // You can dd($e->getMessage()) while testing
+            return redirect()->route('login')->with('error', 'Something went wrong with Google login.');
+        }
+    }
+
 }
+//    through socialite wee are using the googledrive > redirect to the google screen
+
